@@ -1,0 +1,32 @@
+# ============ 环境与密钥（切勿提交到仓库）============
+# 真实配置（含 SECRET_KEY、数据库密码等）只保留在本地，用 .env.example 作为模板
+.env
+.env.*
+!.env.example
+
+# ============ Python / Django ============
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+oj_backend/staticfiles/
+# 运行期上传/生成的数据（测试点等）——演示数据由 seed_demo 自动生成，无需入库
+oj_backend/media/
+*.sqlite3
+*.log
+
+# ============ 前端 / Node ============
+oj_frontend/node_modules/
+oj_frontend/dist/
+oj_frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+
+# ============ IDE / 操作系统 ============
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

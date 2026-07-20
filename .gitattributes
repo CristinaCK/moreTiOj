@@ -1,0 +1,18 @@
+# Git 自动识别文本文件，并在仓库内统一以 LF 存储（提交时归一化）
+* text=auto
+
+# 下列文件会在 Linux 容器/系统中执行或被读取，工作区也强制使用 LF，
+# 否则 Windows 的 CRLF 换行会导致 “bad interpreter” 或构建/启动失败：
+*.sh          text eol=lf
+Dockerfile    text eol=lf
+*.Dockerfile  text eol=lf
+*.conf        text eol=lf
+
+# 常见二进制/媒体，避免被当作文本处理
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff  binary
+*.woff2 binary

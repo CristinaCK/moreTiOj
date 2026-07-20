@@ -1,0 +1,128 @@
+# 教学型 OJ 平台 —— 一体化编排
+# 一条命令拉起：Postgres + Redis + go-judge 沙箱 + 后端(gunicorn) + Celery worker + 前端(Nginx)
+# 启动：docker compose up -d --build        访问：http://localhost:8080
+#
+# 国内加速：基础镜像(postgres/redis/python/debian/node/nginx)的拉取走 Docker Desktop
+# 的“镜像加速器”(registry-mirrors，见 README-部署 与 deploy/daemon.json.example)；
+# 构建内部的 apt/pip/npm/GitHub 源由下方 build.args 从 .env 注入。
+name: oj-platform
+
+services:
+  # ---------- 数据与依赖 ----------
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-oj}
+      POSTGRES_USER: ${POSTGRES_USER:-oj}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oj}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oj} -d ${POSTGRES_DB:-oj}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  # ---------- 判题沙箱 ----------
+  go-judge:
+    build:
+      context: .
+      dockerfile: deploy/gojudge.Dockerfile
+      args:
+        GOJUDGE_VERSION: ${GOJUDGE_VERSION:-1.12.0}
+        APT_MIRROR: ${APT_MIRROR:-mirrors.tuna.tsinghua.edu.cn}
+        GH_PROXY: ${GH_PROXY-https://ghfast.top/}
+    # go-judge 需要特权以创建 namespace/cgroup 隔离（官方要求）
+    privileged: true
+    shm_size: "256m"
+    restart: unless-stopped
+    # 如需在宿主机调试沙箱，可临时放开下面端口
+    # ports:
+    #   - "5050:5050"
+
+  # ---------- 后端 Web（gunicorn）----------
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/backend.Dockerfile
+      args:
+        APT_MIRROR: ${APT_MIRROR:-mirrors.tuna.tsinghua.edu.cn}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+    command: web
+    env_file: .env
+    environment:
+      # 服务间地址固定写死，避免被 .env 误改
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      JUDGE_SANDBOX: go-judge
+      GO_JUDGE_URL: http://go-judge:5050
+    volumes:
+      - media:/app/media           # 测试数据(.in/.out)与 worker 共享
+      - app_data:/app/data         # settings 中的 data 目录（备用）
+      - staticfiles:/app/staticfiles  # collectstatic 产物，供 Nginx 读取
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------- 判题/邮件 Worker（Celery）----------
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/backend.Dockerfile
+      args:
+        APT_MIRROR: ${APT_MIRROR:-mirrors.tuna.tsinghua.edu.cn}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+    command: worker
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      JUDGE_SANDBOX: go-judge
+      GO_JUDGE_URL: http://go-judge:5050
+    volumes:
+      - media:/app/media
+      - app_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      go-judge:
+        condition: service_started
+    restart: unless-stopped
+
+  # ---------- 前端（Nginx，对外入口）----------
+  frontend:
+    build:
+      context: .
+      dockerfile: deploy/frontend.Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - staticfiles:/var/www/static:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  media:
+  app_data:
+  staticfiles:

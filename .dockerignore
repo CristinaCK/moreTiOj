@@ -1,0 +1,15 @@
+# 构建上下文为项目根目录，这里排除不该进镜像的内容
+**/node_modules
+**/dist
+**/.vite
+**/__pycache__
+**/*.pyc
+**/.git
+**/.gitignore
+**/.DS_Store
+**/.env
+**/db.sqlite3
+oj_backend/media
+oj_backend/staticfiles
+oj_backend/data
+oj_backend/docker-compose.yml
