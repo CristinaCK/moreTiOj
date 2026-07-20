@@ -21,7 +21,7 @@ class User(AbstractUser):
 
     avatar = models.URLField("头像", blank=True, default="")
     bio = models.CharField("简介", max_length=255, blank=True, default="")
-    default_language = models.CharField("默认语言", max_length=16, default="python3")
+    default_language = models.CharField("默认语言", max_length=16, default="cpp")
 
     # 竞赛结束后是否默认公开本人代码（用户可在做题/提交层面再单独设置）
     publicize_contest_code = models.BooleanField("默认公开竞赛代码", default=False)
