@@ -277,7 +277,7 @@ function ContestBar({ contest, contestId, displayId, navigate }) {
         size="small"
         type="text"
         icon={<TrophyOutlined />}
-        style={{ marginLeft: 12 }}
+        style={{ marginLeft: 12, color: '#fff' }}
         onClick={() => setBoardOpen(true)}
       >
         排行榜
