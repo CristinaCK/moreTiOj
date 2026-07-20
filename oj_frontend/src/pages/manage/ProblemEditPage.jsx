@@ -206,7 +206,7 @@ export default function ProblemEditPage() {
         visibility: 'hidden',
         allowed_languages: ['python3', 'cpp'],
         time_limit: 1000,
-        memory_limit: 256,
+        memory_limit: 512,
         compare_mode: 'default',
         float_precision: 1e-6,
         spj_enabled: false,
